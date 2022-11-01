@@ -1,46 +1,83 @@
 class Empleado{
-	var property salud
-	const habilidades
-	const subordinados
+	var habilidades = []
+	var puestoDeTrabajo
+	var saludActual
 	
-	method estaIncapacitado() = self.saludCritica() > salud
-	method saludCritica()
+	method estaIncapacitado() = saludActual < puestoDeTrabajo.saludCritica()
 	
-	method esJefe() = subordinados.notEmpty()
+	method puedeUsar(habilidad) = not self.estaIncapacitado() and self.poseeLaHabilidad(habilidad)
 	
-	method puedeUsarLaHabilidad(habilidad) = !self.estaIncapacitado() && self.tieneLaHabilidad(habilidad)
-
-	method tieneLaHabilidad(habilidad) = habilidades.contains(habilidad) || subordinados.any({subordinado => subordinado.puedeUsarLaHabilidad()})
+	method poseeLaHabilidad(habilidad) = habilidades.contains(habilidad)
 	
-}
-class Espia inherits Empleado{
-	var property saludCritica = 15
-	
-	method completarMision(habilidad) { self.aprenderHabilidad(habilidad)}
-	
-	method aprenderHabilidad(habilidad) {habilidades.add(habilidad)}
-}
-class Oficinista inherits Empleado{
-	var cantidadDeEstrellas
-	
-	method completarMision(){cantidadDeEstrellas+=1}
-	
-	override method saludCritica() = 40-5*cantidadDeEstrellas
-}
-class Mision{
-	var equipo
-	var habilidadesNecesarias
-	
-	method realizarMision(){
-		if(self.puedenCumplirLaMision()){
-			equipo.espias().forEach({espia => espia.completarMision(habilidadesNecesarias)})
-			equipo.empleados()
-		}
-		else{
-			
-		}
+	method otorgarPremio(habilidadesRequeridas){
+		if(self.estaVivo())
+			puestoDeTrabajo.otorgarPremio(habilidadesRequeridas, self)
+		else
+			self.error("Esta muerto")
 	}
-	method puedenCumplirLaMision(){
-		
+	
+	method estaVivo() = saludActual > 0
+	
+	method nuevaListaDeHabilidades(listaDeHabilidadesParaAgregar){
+		habilidades.union(listaDeHabilidadesParaAgregar)
+	}
+	
+	method recibirdanio(peligrosidad){
+		saludActual -= peligrosidad
+	}
+}
+
+class Jefe inherits Empleado{
+	var subordinados = []
+	
+	override method puedeUsar(habilidad) = super(habilidad) || subordinados.any({subordinado => subordinado.puedeUsar(habilidad)})
+}
+
+object espia {
+	method saludCritica() = 15
+	method otorgarPremio(habilidadesRequeridas, empleado){
+		empleado.nuevaListaDeHabilidades(habilidadesRequeridas)
+	}
+}
+
+class Oficinista{
+	var cantidadEstrellas = 0
+	method saludCritica() = 40 - 5 * cantidadEstrellas
+	method otorgarPremio(){cantidadEstrellas += 1}
+}
+
+class Mision{
+	
+	var peligrosidad
+	
+	const habilidadesRequeridas = []
+	
+	
+	method serCumplidaPor(alguien){
+		if(self.validadHabilidades(alguien)){
+			alguien.recibirdanio(peligrosidad)			
+			alguien.otorgarPremio(habilidadesRequeridas)
+		}
+		else
+			self.error("No se pudo cumplir la mision")
+	}
+	
+	method validadHabilidades(alguien) = habilidadesRequeridas.all({habilidad => alguien.puedeUsar(habilidad)})
+}
+
+class Equipo{
+	
+	var empleados = []
+	
+	method puedeUsar(habilidad){
+		empleados.any({empleado => empleado.puedeUsar(habilidad)})
+	}
+	
+	method otorgarPremio(habilidadesRequeridas){
+		empleados.forEach({empleado => empleado.otorgarPremio(habilidadesRequeridas)})
+	}	
+
+	method recibirdanio(peligrosidad){
+		empleados.forEach({empleado => empleado.recibirdanio(peligrosidad/3)})
 	}
 }
